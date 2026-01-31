@@ -97,27 +97,150 @@ function parseTrackLines(lines) {
   return tracks;
 }
 
-async function buildTrackMap(musicDir, tracklistPath, onLog) {
+/**
+ * Parse a tracklist that uses quoted blocks to delimit track names.
+ *
+ * Format example:
+ *   "Track One
+ *   (feat. Someone)
+ *   [Unfinished]"
+ *   Features
+ *   "Track Two"
+ *
+ * Rules:
+ *  - Split on `"` boundaries — odd-indexed segments are track blocks
+ *  - First non-empty line of each block = track name
+ *  - Strip leading emoji/symbols with /^[^\w\[]+/u
+ *  - Skip lines starting with ( (producer/alt names)
+ *  - Lines starting with [ are kept only if they look like tags (e.g. [Unfinished])
+ *  - Unquoted lines between blocks (section headers) are ignored
+ *  - Tracks are numbered sequentially
+ */
+function parseQuotedTrackBlocks(text) {
+  const segments = text.split('"');
+  const tracks = [];
+  let seq = 1;
+
+  for (let i = 1; i < segments.length; i += 2) {
+    const block = segments[i];
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) continue;
+
+    // First non-empty line is the track name
+    let name = lines[0].replace(/^[^\w\[]+/u, "").trim();
+    if (!name) continue;
+
+    tracks.push({ trackNum: seq++, trackName: name });
+  }
+
+  return tracks;
+}
+
+/**
+ * Parse clean text lines into (trackNum, trackName) pairs.
+ * Unlike parseTrackLines (designed for noisy OCR output), this does no
+ * stripping of leading numbers, dates, or junk — the input is assumed
+ * to be human-written or copy-pasted clean text.
+ */
+function parseCleanLines(lines) {
+  const tracks = [];
+  let seq = 1;
+
+  for (const raw of lines) {
+    const name = raw.trim();
+    if (!name) continue;
+    tracks.push({ trackNum: seq++, trackName: name });
+  }
+
+  return tracks;
+}
+
+/**
+ * Auto-detect tracklist format and parse into (trackNum, trackName) pairs.
+ *
+ * If text contains `"` and quoted parsing yields tracks, use that.
+ * Otherwise fall back to clean line-per-track parsing.
+ */
+function parseTextTracklist(text) {
+  if (text.includes('"')) {
+    const quoted = parseQuotedTrackBlocks(text);
+    if (quoted.length > 0) return quoted;
+  }
+  return parseCleanLines(text.split("\n"));
+}
+
+/**
+ * OCR multiple tracklist images and return combined (trackNum, trackName) pairs.
+ * Reuses a single tesseract.js worker across all images.
+ */
+async function ocrImages(imagePaths, onLog) {
+  const Tesseract = require("tesseract.js");
+  const worker = await Tesseract.createWorker("eng", 1, {
+    logger: (m) => {
+      if (m.status === "recognizing text" && m.progress != null) {
+        const pct = Math.round(m.progress * 100);
+        if (pct % 10 === 0) onLog(`  OCR progress: ${pct}%`);
+      }
+    },
+  });
+
+  const allTracks = [];
+  let seq = 1;
+
+  for (let i = 0; i < imagePaths.length; i++) {
+    onLog(`OCR image ${i + 1}/${imagePaths.length}: ${path.basename(imagePaths[i])}`);
+    const { data: { text: ocrText } } = await worker.recognize(imagePaths[i]);
+    const parsed = parseTrackLines(ocrText.split("\n"));
+
+    for (const t of parsed) {
+      allTracks.push({ trackNum: seq++, trackName: t.trackName });
+    }
+  }
+
+  await worker.terminate();
+  return allTracks;
+}
+
+/**
+ * Build a filename → trackNumber map by parsing the tracklist source
+ * and fuzzy-matching track names to audio filenames.
+ *
+ * @param {string} musicDir - directory containing audio files
+ * @param {object} tracklist - { mode, images?, textFile?, text? }
+ * @param {function} onLog - logging callback
+ */
+async function buildTrackMap(musicDir, tracklist, onLog) {
   const trackMap = {};
   let totalTracks = 0;
 
-  if (!tracklistPath) return { trackMap, totalTracks };
+  // Backward-compat shim for old string/null format
+  if (typeof tracklist === "string") tracklist = { mode: "images", images: [tracklist] };
+  if (tracklist == null) tracklist = { mode: "none" };
 
-  onLog(`Reading tracklist from: ${tracklistPath}`);
+  if (tracklist.mode === "none") return { trackMap, totalTracks };
 
-  const Tesseract = require("tesseract.js");
-  const worker = await Tesseract.createWorker("eng");
-  const { data: { text: ocrText } } = await worker.recognize(tracklistPath);
-  await worker.terminate();
+  let tracks;
 
-  const tracks = parseTrackLines(ocrText.split("\n"));
+  if (tracklist.mode === "images") {
+    onLog(`Reading tracklist from ${tracklist.images.length} image(s)`);
+    tracks = await ocrImages(tracklist.images, onLog);
+  } else if (tracklist.mode === "textFile") {
+    onLog(`Reading tracklist from file: ${tracklist.textFile}`);
+    const text = fs.readFileSync(tracklist.textFile, "utf-8");
+    tracks = parseTextTracklist(text);
+  } else if (tracklist.mode === "paste") {
+    onLog("Reading pasted tracklist");
+    tracks = parseTextTracklist(tracklist.text);
+  } else {
+    return { trackMap, totalTracks };
+  }
+
   totalTracks = tracks.length;
-
-  onLog(`Parsed ${totalTracks} tracks from OCR`);
+  onLog(`Parsed ${totalTracks} tracks`);
 
   const audioFiles = fs
     .readdirSync(musicDir)
-    .filter((f) => [".mp3", ".m4a", ".wav"].includes(path.extname(f).toLowerCase()));
+    .filter((f) => [".mp3", ".m4a", ".wav", ".flac"].includes(path.extname(f).toLowerCase()));
 
   const usedFiles = new Set();
 
@@ -173,6 +296,7 @@ function convertToM4a(inputPath, outputPath, bitrate) {
 function tagM4a(filePath, { artist, album, title, discNumber, trackNum, totalTracks, coverData, coverMime }) {
   const file = File.createFromPath(filePath);
   file.tag.performers = [artist];
+  file.tag.albumArtists = [artist];
   file.tag.album = album;
   file.tag.title = title;
   file.tag.disc = discNumber;
@@ -274,6 +398,37 @@ async function processFiles(musicDir, artist, album, coverPath, trackMap, totalT
         onLog(`Deleted WAV: ${filename}`);
       }
 
+    // ---------- FLAC -> M4A ----------
+    } else if (ext === ".flac") {
+      onLog(`Processing FLAC: ${filename}`);
+
+      const m4aPath = path.join(musicDir, `${name}.m4a`);
+
+      try {
+        await convertToM4a(filepath, m4aPath, bitrate);
+      } catch (err) {
+        onLog(`ffmpeg failed for ${filename}:\n${err.message}`);
+        continue;
+      }
+
+      tagM4a(m4aPath, {
+        artist,
+        album,
+        title,
+        discNumber: 1,
+        trackNum: trackMap[filename] ?? null,
+        totalTracks,
+        coverData: cover.data,
+        coverMime: cover.mime,
+      });
+
+      onLog(`Created M4A: ${name}.m4a`);
+
+      if (deleteOriginals) {
+        fs.unlinkSync(filepath);
+        onLog(`Deleted FLAC: ${filename}`);
+      }
+
     // ---------- Existing M4A ----------
     } else if (ext === ".m4a") {
       try {
@@ -312,7 +467,23 @@ async function runProcessing(args, onLog) {
     onLog(`Error: Cover image not found: ${cover}`);
     return 1;
   }
-  if (tracklist && !fs.existsSync(tracklist)) {
+
+  // Validate tracklist files exist
+  if (tracklist && typeof tracklist === "object") {
+    if (tracklist.mode === "images") {
+      for (const img of tracklist.images || []) {
+        if (!fs.existsSync(img)) {
+          onLog(`Error: Tracklist image not found: ${img}`);
+          return 1;
+        }
+      }
+    } else if (tracklist.mode === "textFile") {
+      if (!fs.existsSync(tracklist.textFile)) {
+        onLog(`Error: Tracklist text file not found: ${tracklist.textFile}`);
+        return 1;
+      }
+    }
+  } else if (tracklist && typeof tracklist === "string" && !fs.existsSync(tracklist)) {
     onLog(`Error: Tracklist image not found: ${tracklist}`);
     return 1;
   }

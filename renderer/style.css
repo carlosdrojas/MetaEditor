@@ -101,6 +101,110 @@ select {
   border: 1px solid #2a2a4a;
 }
 
+.tracklist-modes {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #b0b0c0;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: #5c6bc0;
+  cursor: pointer;
+}
+
+.tracklist-panel {
+  margin-top: 4px;
+}
+
+#btnAddImages {
+  padding: 6px 14px;
+  background: #2a2a4a;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  color: #c0c0d0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#btnAddImages:hover {
+  background: #3a3a5a;
+}
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.image-list-item {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  border: 1px solid #2a2a4a;
+  overflow: hidden;
+}
+
+.image-list-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-list-item .remove-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  color: #e0e0e0;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.image-list-item .remove-btn:hover {
+  background: rgba(200, 50, 50, 0.8);
+}
+
+#pasteText {
+  width: 100%;
+  padding: 8px 12px;
+  background: #16213e;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+#pasteText:focus {
+  border-color: #5c6bc0;
+}
+
+#pasteText::placeholder {
+  color: #555;
+}
+
 .row {
   display: flex;
   gap: 24px;

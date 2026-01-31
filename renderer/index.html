@@ -39,12 +39,29 @@
       </div>
 
       <div class="field">
-        <label for="tracklist">Tracklist Image <span class="optional">(optional)</span></label>
-        <div class="browse-row">
-          <input type="text" id="tracklist" placeholder="/path/to/tracklist.png" readonly>
-          <button type="button" id="btnTracklist">Browse</button>
+        <label>Tracklist <span class="optional">(optional)</span></label>
+        <div class="tracklist-modes">
+          <label class="radio-label"><input type="radio" name="tracklistMode" value="none" checked> None</label>
+          <label class="radio-label"><input type="radio" name="tracklistMode" value="images"> Image(s)</label>
+          <label class="radio-label"><input type="radio" name="tracklistMode" value="textFile"> Text File</label>
+          <label class="radio-label"><input type="radio" name="tracklistMode" value="paste"> Paste</label>
         </div>
-        <img id="tracklistPreview" class="preview" alt="">
+
+        <div class="tracklist-panel" id="panelImages" style="display:none">
+          <button type="button" id="btnAddImages">Add Image(s)</button>
+          <div class="image-list" id="imageList"></div>
+        </div>
+
+        <div class="tracklist-panel" id="panelTextFile" style="display:none">
+          <div class="browse-row">
+            <input type="text" id="textFilePath" placeholder="/path/to/tracklist.txt" readonly>
+            <button type="button" id="btnTextFile">Browse</button>
+          </div>
+        </div>
+
+        <div class="tracklist-panel" id="panelPaste" style="display:none">
+          <textarea id="pasteText" rows="6" placeholder="Paste tracklist here (one track per line, or quoted blocks)"></textarea>
+        </div>
       </div>
 
       <div class="row">
@@ -61,7 +78,7 @@
         <div class="field checkbox-field">
           <label>
             <input type="checkbox" id="deleteOriginals" checked>
-            Delete original MP3/WAV files
+            Delete original MP3/WAV/FLAC files
           </label>
         </div>
       </div>

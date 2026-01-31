@@ -47,6 +47,15 @@ ipcMain.handle("dialog:openFile", async (_event, filters) => {
   return result.filePaths[0];
 });
 
+ipcMain.handle("dialog:openFiles", async (_event, filters) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ["openFile", "multiSelections"],
+    filters: filters || [],
+  });
+  if (result.canceled) return [];
+  return result.filePaths;
+});
+
 ipcMain.handle("run:process", async (event, args) => {
   const onLog = (line) => {
     mainWindow.webContents.send("process:output", line);

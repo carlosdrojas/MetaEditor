@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld("api", {
 
   selectFile: (filters) => ipcRenderer.invoke("dialog:openFile", filters),
 
+  selectFiles: (filters) => ipcRenderer.invoke("dialog:openFiles", filters),
+
   runProcess: (args) => ipcRenderer.invoke("run:process", args),
 
   onProcessOutput: (callback) => {
