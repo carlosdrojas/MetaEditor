@@ -1,0 +1,12 @@
+{
+  "name": "metadata-editor",
+  "version": "1.0.0",
+  "description": "Desktop app for batch music metadata editing",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetadataEditor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>MetadataEditor</h1>
+
+    <form id="form">
+      <div class="field">
+        <label for="musicDir">Music Directory</label>
+        <div class="browse-row">
+          <input type="text" id="musicDir" placeholder="/path/to/album" readonly>
+          <button type="button" id="btnMusicDir">Browse</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="artist">Artist</label>
+        <input type="text" id="artist" placeholder="Artist name">
+      </div>
+
+      <div class="field">
+        <label for="album">Album</label>
+        <input type="text" id="album" placeholder="Album name">
+      </div>
+
+      <div class="field">
+        <label for="cover">Cover Image</label>
+        <div class="browse-row">
+          <input type="text" id="cover" placeholder="/path/to/cover.jpeg" readonly>
+          <button type="button" id="btnCover">Browse</button>
+        </div>
+        <img id="coverPreview" class="preview" alt="">
+      </div>
+
+      <div class="field">
+        <label for="tracklist">Tracklist Image <span class="optional">(optional)</span></label>
+        <div class="browse-row">
+          <input type="text" id="tracklist" placeholder="/path/to/tracklist.png" readonly>
+          <button type="button" id="btnTracklist">Browse</button>
+        </div>
+        <img id="tracklistPreview" class="preview" alt="">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="bitrate">AAC Bitrate</label>
+          <select id="bitrate">
+            <option value="128k">128k</option>
+            <option value="192k">192k</option>
+            <option value="256k" selected>256k</option>
+            <option value="320k">320k</option>
+          </select>
+        </div>
+
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" id="deleteOriginals" checked>
+            Delete original MP3/WAV files
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" id="btnRun">Run</button>
+    </form>
+
+    <div id="logSection">
+      <div class="log-header">
+        <span>Output</span>
+        <button type="button" id="btnClearLog" title="Clear log">Clear</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
