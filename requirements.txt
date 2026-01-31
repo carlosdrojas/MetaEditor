@@ -1,0 +1,4 @@
+mutagen==1.47.0
+pillow==12.1.0
+pytesseract==0.3.13
+thefuzz==0.22.1
