@@ -1,0 +1,69 @@
+Processing MP3: BodyRock Part 2 [V1] (feat. TisaKorean).mp3
+ffmpeg failed for BodyRock Part 2 [V1] (feat. TisaKorean).mp3:
+ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.3.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.0.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60.  8.100 / 60.  8.100
+  libavcodec     62. 11.100 / 62. 11.100
+  libavformat    62.  3.100 / 62.  3.100
+  libavdevice    62.  1.100 / 62.  1.100
+  libavfilter    11.  4.100 / 11.  4.100
+  libswscale      9.  1.100 /  9.  1.100
+  libswresample   6.  1.100 /  6.  1.100
+Input #0, mp3, from '/Users/carlosrojas/Music/Uzi/W.H.2.U./BodyRock Part 2 [V1] (feat. TisaKorean).mp3':
+  Metadata:
+    title           : BodyRock Part 2 [V1] (feat. TisaKorean)
+    artist          : Lil Uzi Vert
+    album           : W.H.2.U.
+  Duration: 00:02:18.32, start: 0.025056, bitrate: 320 kb/s
+  Stream #0:0: Audio: mp3 (mp3float), 44100 Hz, stereo, fltp, 320 kb/s, start 0.025057
+    Metadata:
+      encoder         : LAME3.100
+  Stream #0:1: Video: mjpeg (Baseline), yuvj420p(pc, bt470bg/unknown/unknown), 225x225 [SAR 1:1 DAR 1:1], 90k tbr, 90k tbn, start 0.025056 (attached pic)
+    Metadata:
+      title           : Cover
+      comment         : Cover (front)
+Stream mapping:
+  Stream #0:1 -> #0:0 (mjpeg (native) -> h264 (libx264))
+  Stream #0:0 -> #0:1 (mp3 (mp3float) -> aac (native))
+Press [q] to stop, [?] for help
+[libx264 @ 0x12ff04b70] width not divisible by 2 (225x225)
+[vost#0:0/libx264 @ 0x12ff048b0] [enc:libx264 @ 0x600000774150] Error while opening encoder - maybe incorrect parameters such as bit_rate, rate, width or height.
+[vf#0:0 @ 0x118008a00] Error sending frames to consumers: Generic error in an external library
+[vf#0:0 @ 0x118008a00] Task finished with error code: -542398533 (Generic error in an external library)
+[vf#0:0 @ 0x118008a00] Terminating thread with return code -542398533 (Generic error in an external library)
+[vost#0:0/libx264 @ 0x12ff048b0] [enc:libx264 @ 0x600000774150] Could not open encoder before EOF
+[vost#0:0/libx264 @ 0x12ff048b0] Task finished with error code: -22 (Invalid argument)
+[vost#0:0/libx264 @ 0x12ff048b0] Terminating thread with return code -22 (Invalid argument)
+[out#0/ipod @ 0x600001960000] Nothing was written into output file, because at least one of its streams received no packets.
+frame=    0 fps=0.0 q=0.0 Lsize=       0KiB time=N/A bitrate=N/A speed=N/A elapsed=0:00:00.03    
+[aac @ 0x13ff06b20] Qavg: 4940.370
+Conversion failed!
+
+Updated M4A: HOW YOU DOING [V1] (feat. Yeat).m4a
+Traceback (most recent call last):
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/mp4/__init__.py", line 1053, in load
+    moov = atoms[b"moov"]
+           ~~~~~^^^^^^^^^
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/mp4/_atom.py", line 188, in __getitem__
+    raise KeyError("%r not found" % names[0])
+KeyError: "b'moov' not found"
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/metaEditor.py", line 89, in <module>
+    audio = MP4(filepath)
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/_file.py", line 48, in __init__
+    self.load(*args, **kwargs)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/_util.py", line 156, in wrapper
+    return func(self, h, *args, **kwargs)
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/mp4/__init__.py", line 1184, in load
+    self.info.load(atoms, fileobj)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/_util.py", line 185, in wrapper
+    return func(*args, **kwargs)
+  File "/Users/carlosrojas/Documents/Dev/MetadataEditor/venv/lib/python3.13/site-packages/mutagen/mp4/__init__.py", line 1055, in load
+    raise MP4StreamInfoError("not a MP4 file")
+mutagen.mp4.MP4StreamInfoError: not a MP4 file
