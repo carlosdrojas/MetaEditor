@@ -22,7 +22,7 @@ document.getElementById("btnMusicDir").addEventListener("click", async () => {
 
 document.getElementById("btnCover").addEventListener("click", async () => {
   const file = await window.api.selectFile([
-    { name: "Images", extensions: ["jpg", "jpeg", "png"] },
+    { name: "Images", extensions: ["jpg", "jpeg", "png", "webp"] },
   ]);
   if (file) {
     coverInput.value = file;

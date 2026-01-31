@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import argparse
@@ -10,6 +11,31 @@ from PIL import Image
 from thefuzz import fuzz
 
 
+def load_cover(cover_path):
+    """Load cover image and return (bytes, mime_type, mp4_format).
+
+    JPEG and PNG are embedded natively. All other formats (WebP, BMP, TIFF, etc.)
+    are converted to JPEG before embedding.
+    """
+    img = Image.open(cover_path)
+    fmt = img.format  # "JPEG", "PNG", "WEBP", etc.
+
+    if fmt == "PNG":
+        with open(cover_path, "rb") as f:
+            return f.read(), "image/png", MP4Cover.FORMAT_PNG
+
+    if fmt == "JPEG":
+        with open(cover_path, "rb") as f:
+            return f.read(), "image/jpeg", MP4Cover.FORMAT_JPEG
+
+    # Convert everything else (WebP, BMP, TIFF, etc.) to JPEG
+    print(f"Converting {fmt} cover image to JPEG for embedding", flush=True)
+    rgb_img = img.convert("RGB")
+    buf = io.BytesIO()
+    rgb_img.save(buf, format="JPEG", quality=95)
+    return buf.getvalue(), "image/jpeg", MP4Cover.FORMAT_JPEG
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Batch-apply metadata to music files (MP3/WAV → M4A conversion + tagging)"
@@ -17,7 +43,7 @@ def parse_args():
     parser.add_argument("--music-dir", required=True, help="Directory containing music files")
     parser.add_argument("--artist", required=True, help="Artist name")
     parser.add_argument("--album", required=True, help="Album name")
-    parser.add_argument("--cover", required=True, help="Path to cover image (JPEG)")
+    parser.add_argument("--cover", required=True, help="Path to cover image (JPEG, PNG, or WebP)")
     parser.add_argument("--tracklist", default=None, help="Path to tracklist screenshot for OCR-based track numbering")
     parser.add_argument("--delete-originals", action="store_true", default=False, help="Delete original MP3/WAV files after conversion")
     parser.add_argument("--bitrate", default="256k", choices=["128k", "192k", "256k", "320k"], help="AAC bitrate (default: 256k)")
@@ -65,8 +91,7 @@ def build_track_map(music_dir, tracklist_path):
 
 
 def process_files(music_dir, artist, album, cover_path, track_map, total_tracks, delete_originals, bitrate):
-    with open(cover_path, "rb") as img:
-        cover_data = img.read()
+    cover_data, cover_mime, cover_mp4fmt = load_cover(cover_path)
 
     for filename in os.listdir(music_dir):
         filepath = os.path.join(music_dir, filename)
@@ -92,7 +117,7 @@ def process_files(music_dir, artist, album, cover_path, track_map, total_tracks,
             mp3.tags.add(
                 APIC(
                     encoding=3,
-                    mime="image/jpeg",
+                    mime=cover_mime,
                     type=3,
                     desc="Cover",
                     data=cover_data,
@@ -128,7 +153,7 @@ def process_files(music_dir, artist, album, cover_path, track_map, total_tracks,
             if filename in track_map:
                 m4a["trkn"] = [(track_map[filename], total_tracks)]
             m4a["covr"] = [
-                MP4Cover(cover_data, imageformat=MP4Cover.FORMAT_JPEG)
+                MP4Cover(cover_data, imageformat=cover_mp4fmt)
             ]
             m4a.save()
 
@@ -170,7 +195,7 @@ def process_files(music_dir, artist, album, cover_path, track_map, total_tracks,
             if filename in track_map:
                 m4a["trkn"] = [(track_map[filename], total_tracks)]
             m4a["covr"] = [
-                MP4Cover(cover_data, imageformat=MP4Cover.FORMAT_JPEG)
+                MP4Cover(cover_data, imageformat=cover_mp4fmt)
             ]
             m4a.save()
 
@@ -195,7 +220,7 @@ def process_files(music_dir, artist, album, cover_path, track_map, total_tracks,
             if filename in track_map:
                 audio["trkn"] = [(track_map[filename], total_tracks)]
             audio["covr"] = [
-                MP4Cover(cover_data, imageformat=MP4Cover.FORMAT_JPEG)
+                MP4Cover(cover_data, imageformat=cover_mp4fmt)
             ]
             audio.save()
 
