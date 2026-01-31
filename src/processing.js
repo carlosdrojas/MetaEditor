@@ -34,6 +34,69 @@ async function loadCover(coverPath, onLog) {
 // OCR tracklist -> track number map
 // ---------------------------------------------------------------------------
 
+// Date patterns to filter out of OCR output (full line match)
+const DATE_RE = new RegExp(
+  [
+    // Month DD, YYYY  or  Month DD YYYY (with optional leading junk like ©)
+    /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2},?\s*\d{4}/i.source,
+    // Mon DD, YYYY (abbreviated, with optional leading junk)
+    /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d{1,2},?\s*\d{4}/i.source,
+    // MM/DD/YYYY  or  DD/MM/YYYY  or  YYYY-MM-DD
+    /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/.source,
+  ].join("|"),
+  "i"
+);
+
+// Common OCR noise: symbols that appear as misread digits, menu icons, etc.
+// Strip these from the start and end of track name lines.
+const JUNK_RE = /^[\s|,;:©=\-."'!]+|[\s|,;:©=\-."'!I]+$/g;
+
+/**
+ * Parse OCR lines into (trackNumber, trackName) pairs.
+ *
+ * Real-world OCR from tracklist screenshots is noisy:
+ *  - Track numbers on the left are often misread as |, comma, or merged into
+ *    the name (e.g. "| Kickback =", ", NoTellHer =", "5 NBATrack3 [V1] I")
+ *  - Dates appear on their own line, sometimes with leading © or similar junk
+ *  - "..." menu icons get read as = or I
+ *
+ * Strategy:
+ *  1. Drop lines that contain a date pattern
+ *  2. Strip leading/trailing OCR junk from remaining lines
+ *  3. If a line starts with a number followed by a space, split off the number
+ *     (it's a misread track number merged into the name)
+ *  4. Drop any lines that are empty or purely numeric after cleaning
+ *  5. Number the surviving lines sequentially — the visual top-to-bottom order
+ *     in the screenshot is the track order
+ */
+function parseTrackLines(lines) {
+  const tracks = [];
+  let seq = 1;
+
+  for (let raw of lines) {
+    raw = raw.trim();
+    if (!raw) continue;
+
+    // Skip date lines (may have leading junk like ©)
+    if (DATE_RE.test(raw)) continue;
+
+    // Strip OCR junk from edges
+    let name = raw.replace(JUNK_RE, "").trim();
+    if (!name) continue;
+
+    // If line starts with digits + space, the track number got merged in — strip it
+    name = name.replace(/^\d+\s+/, "").trim();
+    if (!name) continue;
+
+    // Skip lines that are purely numeric (stray numbers)
+    if (/^\d+$/.test(name)) continue;
+
+    tracks.push({ trackNum: seq++, trackName: name });
+  }
+
+  return tracks;
+}
+
 async function buildTrackMap(musicDir, tracklistPath, onLog) {
   const trackMap = {};
   let totalTracks = 0;
@@ -47,12 +110,10 @@ async function buildTrackMap(musicDir, tracklistPath, onLog) {
   const { data: { text: ocrText } } = await worker.recognize(tracklistPath);
   await worker.terminate();
 
-  const trackNames = ocrText
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const tracks = parseTrackLines(ocrText.split("\n"));
+  totalTracks = tracks.length;
 
-  totalTracks = trackNames.length;
+  onLog(`Parsed ${totalTracks} tracks from OCR`);
 
   const audioFiles = fs
     .readdirSync(musicDir)
@@ -60,9 +121,7 @@ async function buildTrackMap(musicDir, tracklistPath, onLog) {
 
   const usedFiles = new Set();
 
-  for (let i = 0; i < trackNames.length; i++) {
-    const trackNum = i + 1;
-    const trackName = trackNames[i];
+  for (const { trackNum, trackName } of tracks) {
     let bestScore = 0;
     let bestFile = null;
 

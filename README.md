@@ -49,25 +49,9 @@ npm start
 | WAV   | M4A    |
 | M4A   | M4A (tagged in-place) |
 
-## Building for Distribution
+## Download
 
-Package the app as a standalone installer with no prerequisites for end users:
-
-```bash
-# macOS (.dmg)
-npm run dist:mac
-
-# Windows (.exe / NSIS installer)
-npm run dist:win
-
-# Linux (.AppImage)
-npm run dist:linux
-
-# Current platform
-npm run dist
-```
-
-Output goes to the `dist/` directory. The resulting app bundles ffmpeg, tesseract (WASM), and all dependencies — users just download and run.
+Grab the latest `.dmg` (macOS) from the [Releases](../../releases) page. Double-click to install — no prerequisites needed.
 
 ## Project Structure
 
@@ -87,19 +71,7 @@ MetadataEditor/
 └── requirements.txt           legacy Python deps
 ```
 
-## Scripts
-
-| Command | Description |
-|---|---|
-| `npm start` | Run in dev mode |
-| `npm run pack` | Package to directory (for testing) |
-| `npm run dist` | Build distributable for current platform |
-| `npm run dist:mac` | Build .dmg |
-| `npm run dist:win` | Build .exe (NSIS installer) |
-| `npm run dist:linux` | Build .AppImage |
-
 ## Notes
 
 - The first OCR run downloads English language data (~4MB) from CDN and caches it for subsequent runs.
 - Cover images in formats other than JPEG/PNG (e.g. WebP, BMP, TIFF) are automatically converted to JPEG before embedding.
-- `metaEditor.py` is the original Python CLI tool, kept for reference. It is not used by the Electron app.
