@@ -7,3 +7,5 @@ CLAUDE.md
 output.txt
 covers/
 tracklists/
+dist/
+build/

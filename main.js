@@ -1,6 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
+const { runProcessing } = require("./src/processing");
 
 let mainWindow;
 
@@ -48,43 +48,18 @@ ipcMain.handle("dialog:openFile", async (_event, filters) => {
 });
 
 ipcMain.handle("run:process", async (event, args) => {
-  const pythonArgs = [
-    path.join(__dirname, "metaEditor.py"),
-    "--music-dir", args.musicDir,
-    "--artist", args.artist,
-    "--album", args.album,
-    "--cover", args.cover,
-    "--bitrate", args.bitrate,
-  ];
+  const onLog = (line) => {
+    mainWindow.webContents.send("process:output", line);
+  };
 
-  if (args.deleteOriginals) {
-    pythonArgs.push("--delete-originals");
+  let code;
+  try {
+    code = await runProcessing(args, onLog);
+  } catch (err) {
+    onLog(`[error] ${err.message}`);
+    code = 1;
   }
 
-  if (args.tracklist) {
-    pythonArgs.push("--tracklist", args.tracklist);
-  }
-
-  const child = spawn("python3", pythonArgs);
-
-  child.stdout.on("data", (data) => {
-    const lines = data.toString().split("\n");
-    for (const line of lines) {
-      if (line) mainWindow.webContents.send("process:output", line);
-    }
-  });
-
-  child.stderr.on("data", (data) => {
-    const lines = data.toString().split("\n");
-    for (const line of lines) {
-      if (line) mainWindow.webContents.send("process:output", `[stderr] ${line}`);
-    }
-  });
-
-  return new Promise((resolve) => {
-    child.on("close", (code) => {
-      mainWindow.webContents.send("process:done", code);
-      resolve(code);
-    });
-  });
+  mainWindow.webContents.send("process:done", code);
+  return code;
 });
