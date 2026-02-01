@@ -60,13 +60,7 @@ Only the first line of each quoted block is used as the track name. Unquoted lin
 
 ## Download
 
-Grab the latest release for your platform from the [Releases](../../releases) page. No prerequisites needed — the app bundles everything.
-
-| Platform | Format |
-|---|---|
-| macOS | `.dmg` |
-| Windows | `.exe` (NSIS installer) |
-| Linux | `.AppImage` |
+Grab the latest `.dmg` from the [Releases](../../releases) page. No prerequisites needed — the app bundles everything.
 
 ## Getting started
 
