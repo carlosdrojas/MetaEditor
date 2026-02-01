@@ -118,7 +118,9 @@ function parseTrackLines(lines) {
  *  - Tracks are numbered sequentially
  */
 function parseQuotedTrackBlocks(text) {
-  const segments = text.split('"');
+  // Normalize escaped double quotes ("") so they don't break the split
+  const normalized = text.replace(/""/g, "\0");
+  const segments = normalized.split('"');
   const tracks = [];
   let seq = 1;
 
@@ -127,8 +129,8 @@ function parseQuotedTrackBlocks(text) {
     const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) continue;
 
-    // First non-empty line is the track name
-    let name = lines[0].replace(/^[^\w\[]+/u, "").trim();
+    // First non-empty line is the track name; restore any escaped quotes
+    let name = lines[0].replace(/\0/g, '"').replace(/^[^\w\[]+/u, "").trim();
     if (!name) continue;
 
     tracks.push({ trackNum: seq++, trackName: name });
