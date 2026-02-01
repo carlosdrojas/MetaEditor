@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
@@ -322,6 +323,22 @@ function tagM4a(filePath, { artist, album, title, discNumber, trackNum, totalTra
 }
 
 // ---------------------------------------------------------------------------
+// Concurrency pool
+// ---------------------------------------------------------------------------
+
+const CONVERTIBLE = new Set([".mp3", ".wav", ".flac"]);
+
+async function runWithConcurrency(tasks, limit) {
+  const executing = new Set();
+  for (const task of tasks) {
+    const p = task().finally(() => executing.delete(p));
+    executing.add(p);
+    if (executing.size >= limit) await Promise.race(executing);
+  }
+  await Promise.all(executing);
+}
+
+// ---------------------------------------------------------------------------
 // Main processing loop
 // ---------------------------------------------------------------------------
 
@@ -329,108 +346,51 @@ async function processFiles(musicDir, artist, album, coverPath, trackMap, totalT
   const cover = await loadCover(coverPath, onLog);
 
   const entries = fs.readdirSync(musicDir);
+  const audioExts = new Set([...CONVERTIBLE, ".m4a"]);
+
+  const tasks = [];
 
   for (const filename of entries) {
-    const filepath = path.join(musicDir, filename);
     const ext = path.extname(filename).toLowerCase();
-    const name = path.parse(filename).name;
-    const title = name;
+    if (!audioExts.has(ext)) continue;
 
-    // ---------- MP3 -> M4A ----------
-    if (ext === ".mp3") {
-      onLog(`Processing MP3: ${filename}`);
+    tasks.push(() => {
+      const filepath = path.join(musicDir, filename);
+      const name = path.parse(filename).name;
+      const title = name;
+      const extLabel = ext.slice(1).toUpperCase();
 
-      const m4aPath = path.join(musicDir, `${name}.m4a`);
+      if (CONVERTIBLE.has(ext)) {
+        onLog(`Processing ${extLabel}: ${filename}`);
 
-      try {
-        await convertToM4a(filepath, m4aPath, bitrate);
-      } catch (err) {
-        onLog(`ffmpeg failed for ${filename}:\n${err.message}`);
-        continue;
+        const m4aPath = path.join(musicDir, `${name}.m4a`);
+
+        return convertToM4a(filepath, m4aPath, bitrate)
+          .then(() => {
+            tagM4a(m4aPath, {
+              artist,
+              album,
+              title,
+              discNumber: 1,
+              trackNum: trackMap[filename] ?? null,
+              totalTracks,
+              coverData: cover.data,
+              coverMime: cover.mime,
+            });
+
+            onLog(`Created M4A: ${name}.m4a`);
+
+            if (deleteOriginals) {
+              fs.unlinkSync(filepath);
+              onLog(`Deleted ${extLabel}: ${filename}`);
+            }
+          })
+          .catch((err) => {
+            onLog(`ffmpeg failed for ${filename}:\n${err.message}`);
+          });
       }
 
-      tagM4a(m4aPath, {
-        artist,
-        album,
-        title,
-        discNumber: 1,
-        trackNum: trackMap[filename] ?? null,
-        totalTracks,
-        coverData: cover.data,
-        coverMime: cover.mime,
-      });
-
-      onLog(`Created M4A: ${name}.m4a`);
-
-      if (deleteOriginals) {
-        fs.unlinkSync(filepath);
-        onLog(`Deleted MP3: ${filename}`);
-      }
-
-    // ---------- WAV -> M4A ----------
-    } else if (ext === ".wav") {
-      onLog(`Processing WAV: ${filename}`);
-
-      const m4aPath = path.join(musicDir, `${name}.m4a`);
-
-      try {
-        await convertToM4a(filepath, m4aPath, bitrate);
-      } catch (err) {
-        onLog(`ffmpeg failed for ${filename}:\n${err.message}`);
-        continue;
-      }
-
-      tagM4a(m4aPath, {
-        artist,
-        album,
-        title,
-        discNumber: 1,
-        trackNum: trackMap[filename] ?? null,
-        totalTracks,
-        coverData: cover.data,
-        coverMime: cover.mime,
-      });
-
-      onLog(`Created M4A: ${name}.m4a`);
-
-      if (deleteOriginals) {
-        fs.unlinkSync(filepath);
-        onLog(`Deleted WAV: ${filename}`);
-      }
-
-    // ---------- FLAC -> M4A ----------
-    } else if (ext === ".flac") {
-      onLog(`Processing FLAC: ${filename}`);
-
-      const m4aPath = path.join(musicDir, `${name}.m4a`);
-
-      try {
-        await convertToM4a(filepath, m4aPath, bitrate);
-      } catch (err) {
-        onLog(`ffmpeg failed for ${filename}:\n${err.message}`);
-        continue;
-      }
-
-      tagM4a(m4aPath, {
-        artist,
-        album,
-        title,
-        discNumber: 1,
-        trackNum: trackMap[filename] ?? null,
-        totalTracks,
-        coverData: cover.data,
-        coverMime: cover.mime,
-      });
-
-      onLog(`Created M4A: ${name}.m4a`);
-
-      if (deleteOriginals) {
-        fs.unlinkSync(filepath);
-        onLog(`Deleted FLAC: ${filename}`);
-      }
-
-    // ---------- Existing M4A ----------
-    } else if (ext === ".m4a") {
+      // ---------- Existing M4A ----------
       try {
         tagM4a(filepath, {
           artist,
@@ -444,12 +404,17 @@ async function processFiles(musicDir, artist, album, coverPath, trackMap, totalT
         });
       } catch (err) {
         onLog(`Skipping invalid M4A: ${filename} (${err.message})`);
-        continue;
+        return Promise.resolve();
       }
 
       onLog(`Updated M4A: ${filename}`);
-    }
+      return Promise.resolve();
+    });
   }
+
+  const concurrency = Math.min(os.cpus().length, 8);
+  onLog(`Processing ${tasks.length} file(s) (concurrency: ${concurrency})...\n`);
+  await runWithConcurrency(tasks, concurrency);
 }
 
 // ---------------------------------------------------------------------------
